@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Page2PDF</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap');
+
+    :root {
+      --bg: #0f0f14;
+      --surface: #17171f;
+      --surface2: #1f2030;
+      --accent: #7c72f5;
+      --accent2: #4ade80;
+      --text: #eeeef8;
+      --muted: #9090b0;
+      --border: #2e2e46;
+      --danger: #f87171;
+      --radius: 10px;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      width: 320px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Space Mono', sans-serif;
+      overflow-y: auto;
+    }
+
+    /* Noise texture overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, #6c62e5, #9a8ff9);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .logo-icon svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .logo-text {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: var(--text);
+    }
+
+    .logo-text span {
+      color: var(--accent);
+    }
+
+    .version {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: var(--muted);
+      background: var(--surface);
+      padding: 2px 7px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+    }
+
+    /* Page info */
+    .page-info {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .page-info-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .page-info-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .page-info-url {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Options section */
+    .section-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      margin-bottom: -8px;
+    }
+
+    .options {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .option-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+
+    .option-row:hover {
+      border-color: var(--accent);
+    }
+
+    .option-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .option-icon {
+      width: 28px;
+      height: 28px;
+      background: var(--surface2);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent);
+      font-size: 14px;
+    }
+
+    .option-text {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .option-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .option-desc {
+      font-size: 10px;
+      color: var(--muted);
+    }
+
+    /* Toggle switch */
+    .toggle {
+      position: relative;
+      width: 38px;
+      height: 22px;
+      flex-shrink: 0;
+    }
+
+    .toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      inset: 0;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .toggle-slider::before {
+      content: '';
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      left: 2px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: var(--muted);
+      border-radius: 50%;
+      transition: all 0.2s;
+    }
+
+    .toggle input:checked + .toggle-slider {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .toggle input:checked + .toggle-slider::before {
+      transform: translate(16px, -50%);
+      background: #ffffff;
+    }
+
+    /* Main CTA */
+    .capture-btn {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #6c62e5 0%, #9a8ff9 100%);
+      color: #ffffff;
+      border: none;
+      border-radius: var(--radius);
+      font-family: 'Space Mono', sans-serif;
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: 0.3px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .capture-btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0);
+      transition: background 0.2s;
+    }
+
+    .capture-btn:hover::before {
+      background: rgba(255,255,255,0.08);
+    }
+
+    .capture-btn:active {
+      transform: scale(0.98);
+    }
+
+    .capture-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .capture-btn.loading {
+      background: var(--surface2);
+      color: var(--accent);
+      border: 1px solid rgba(124, 114, 245, 0.5);
+      opacity: 1; /* override the :disabled opacity — loading has its own style */
+    }
+
+    .capture-btn svg {
+      flex-shrink: 0;
+    }
+
+    .btn-state {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+    }
+
+    .btn-state[hidden] {
+      display: none;
+    }
+
+    /* Progress bar */
+    .progress-wrap {
+      display: none;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .progress-wrap.visible {
+      display: flex;
+    }
+
+    .progress-status {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .progress-label {
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .progress-pct {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      color: var(--accent);
+    }
+
+    .progress-bar {
+      height: 4px;
+      background: var(--surface2);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      border-radius: 2px;
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    /* Success state */
+    .success-msg {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      background: rgba(74, 222, 128, 0.08);
+      border: 1px solid rgba(74, 222, 128, 0.28);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      font-size: 12px;
+      color: var(--accent2);
+      font-weight: 600;
+    }
+
+    .success-msg.visible {
+      display: flex;
+    }
+
+    /* Error state */
+    .error-msg {
+      display: none;
+      align-items: flex-start;
+      gap: 8px;
+      background: rgba(248, 113, 113, 0.08);
+      border: 1px solid rgba(248, 113, 113, 0.28);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      font-size: 11px;
+      color: var(--danger);
+      font-weight: 600;
+      line-height: 1.4;
+    }
+
+    .error-msg.visible {
+      display: flex;
+    }
+
+    /* Spinner */
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(124, 114, 245, 0.25);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      flex-shrink: 0;
+    }
+
+    /* Uncapturable page notice */
+    .notice {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      background: rgba(248, 113, 113, 0.07);
+      border: 1px solid rgba(248, 113, 113, 0.25);
+      border-radius: var(--radius);
+      padding: 9px 13px;
+      font-size: 11px;
+      color: var(--danger);
+      font-weight: 600;
+      line-height: 1.4;
+    }
+
+    .notice.visible {
+      display: flex;
+    }
+
+    /* Keyboard focus rings — only shown when navigating via keyboard (:focus-visible) */
+    .capture-btn:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 3px;
+    }
+
+    .toggle input:focus-visible + .toggle-slider {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    .view-pdf-btn:focus-visible {
+      outline: 2px solid var(--accent2);
+      outline-offset: 2px;
+    }
+
+    .filename-input:focus-visible {
+      /* Focus is shown on the wrapper via :focus-within border-color change */
+      outline: none;
+    }
+
+    /* Divider */
+    .divider {
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* Filename input */
+    .filename-row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .filename-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+    }
+
+    .filename-input-wrap {
+      display: flex;
+      align-items: center;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 8px 12px;
+      gap: 4px;
+      transition: border-color 0.15s;
+    }
+
+    .filename-input-wrap:focus-within {
+      border-color: var(--accent);
+    }
+
+    .filename-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      min-width: 0;
+    }
+
+    .filename-ext {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+
+    /* View PDF button inside success message */
+    .view-pdf-btn {
+      background: transparent;
+      border: 1px solid var(--accent2);
+      color: var(--accent2);
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      font-weight: 700;
+      cursor: pointer;
+      flex-shrink: 0;
+      margin-left: auto;
+      transition: background 0.15s;
+    }
+
+    .view-pdf-btn:hover {
+      background: rgba(74, 222, 128, 0.12);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <div class="logo">
+        <div class="logo-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="12" y1="12" x2="12" y2="18"/>
+            <line x1="9" y1="15" x2="15" y2="15"/>
+          </svg>
+        </div>
+        <span class="logo-text">Page<span>2</span>PDF</span>
+      </div>
+      <span class="version">v1.0</span>
+    </div>
+
+    <!-- Uncapturable page notice — shown only on chrome://, devtools, etc. -->
+    <div class="notice" id="noticeMsg">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="flex-shrink:0">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <span id="noticeText"></span>
+    </div>
+
+    <!-- Page info -->
+    <div class="page-info">
+      <span class="page-info-label">Current Page</span>
+      <span class="page-info-title" id="pageTitle">Loading...</span>
+      <span class="page-info-url" id="pageUrl">—</span>
+    </div>
+
+    <!-- Filename -->
+    <div class="filename-row">
+      <span class="filename-label">Filename</span>
+      <div class="filename-input-wrap">
+        <input type="text" id="filenameInput" class="filename-input" placeholder="page2pdf-capture" autocomplete="off" spellcheck="false" />
+        <span class="filename-ext">.pdf</span>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <span class="section-label">Options</span>
+
+    <!-- Options -->
+    <div class="options">
+      <!-- Remove ads / hide elements -->
+      <label class="option-row">
+        <div class="option-left">
+          <div class="option-icon">🚫</div>
+          <div class="option-text">
+            <span class="option-name">Hide Popups & Bars</span>
+            <span class="option-desc">Hides cookie banners, chat widgets</span>
+          </div>
+        </div>
+        <div class="toggle">
+          <input type="checkbox" id="hidePopups" />
+          <span class="toggle-slider"></span>
+        </div>
+      </label>
+
+      <!-- Background -->
+      <label class="option-row">
+        <div class="option-left">
+          <div class="option-icon">🌐</div>
+          <div class="option-text">
+            <span class="option-name">Include Backgrounds</span>
+            <span class="option-desc">Captures CSS backgrounds & colors</span>
+          </div>
+        </div>
+        <div class="toggle">
+          <input type="checkbox" id="includeBackground" checked />
+          <span class="toggle-slider"></span>
+        </div>
+      </label>
+
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Progress -->
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-status">
+        <span class="progress-label" id="progressLabel">Preparing page...</span>
+        <span class="progress-pct" id="progressPct">0%</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+    </div>
+
+    <!-- Success -->
+    <div class="success-msg" id="successMsg">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="flex-shrink:0">
+        <path d="M20 6L9 17l-5-5"/>
+      </svg>
+      PDF saved to Downloads!
+      <button class="view-pdf-btn" id="viewPdfBtn" hidden>Open</button>
+    </div>
+
+    <!-- Error -->
+    <div class="error-msg" id="errorMsg">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="flex-shrink:0; margin-top:1px;">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <span id="errorText">Something went wrong.</span>
+    </div>
+
+    <!-- CTA — all states pre-authored, toggled via the `hidden` attribute -->
+    <button class="capture-btn" id="captureBtn">
+      <span class="btn-state btn-default">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Capture Full Page → PDF
+      </span>
+      <span class="btn-state btn-loading" hidden>
+        <div class="spinner"></div>
+        Capturing...
+      </span>
+      <span class="btn-state btn-success" hidden>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <path d="M20 6L9 17l-5-5"/>
+        </svg>
+        Capture Another Page
+      </span>
+      <span class="btn-state btn-retry" hidden>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Try Again
+      </span>
+    </button>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
